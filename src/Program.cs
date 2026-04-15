@@ -2,22 +2,45 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-// You can use print statements as follows for debugging, they'll be visible when running tests.
 Console.WriteLine("Logs from your program will appear here!");
 
 TcpListener server = new TcpListener(IPAddress.Any, 6379);
 server.Start();
 
-var client = server.AcceptSocket();
+Console.WriteLine("Server started...");
 
-var stream = new NetworkStream(client);
+while (true)
+{
+    Socket client = server.AcceptSocket();
+    Console.WriteLine("Client connected");
 
-string response = "+PONG\r\n";
-byte[] responseBytes = Encoding.UTF8.GetBytes(response);
+    try
+    {
+        while (true)
+        {
+            byte[] buffer = new byte[1024];
+            int bytesRead = client.Receive(buffer);
 
-stream.Write(responseBytes, 0, responseBytes.Length);
+            if (bytesRead == 0)
+            {
+                Console.WriteLine("Client disconnected");
+                break;
+            }
 
-client.Close();
+            string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
+            byte[] response = Encoding.UTF8.GetBytes("+PONG\r\n");
+            client.Send(response);
+        }
+    }
+    catch
+    {
+        Console.WriteLine("Connection error");
+    }
+    finally
+    {
+        client.Close();
+    }
+}
 
 
