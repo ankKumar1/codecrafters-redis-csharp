@@ -13,7 +13,11 @@ while (true)
 {
     Socket client = server.AcceptSocket();
     Console.WriteLine("Client connected");
+    await Task.Run(() => HandleClient(client));
+}
 
+void HandleClient(Socket client)
+{
     try
     {
         while (true)
@@ -42,5 +46,4 @@ while (true)
         client.Close();
     }
 }
-
 
