@@ -13,7 +13,7 @@ while (true)
 {
     Socket client = server.AcceptSocket();
     Console.WriteLine("Client connected");
-    await Task.Run(() => HandleClient(client));
+    Task.Run(() => HandleClient(client));
 }
 
 void HandleClient(Socket client)
