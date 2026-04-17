@@ -1,3 +1,4 @@
+using codecrafters_redis.src;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -32,9 +33,26 @@ void HandleClient(Socket client)
             }
 
             string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            string[] command = RespParser.ParseRESP(request);
 
-            byte[] response = Encoding.UTF8.GetBytes("+PONG\r\n");
-            client.Send(response);
+            if(command.Length == 0)
+            {
+                return;
+            }
+
+            if (command[0].ToLower() == "echo")
+            {
+                string message = command[1];
+
+                string response = $"${message.Length}\r\n{message}\r\n";
+                client.Send(Encoding.UTF8.GetBytes(response));
+            }
+            else
+            {
+                byte[] response = Encoding.UTF8.GetBytes("+PONG\r\n");
+                client.Send(response);
+            }
+            
         }
     }
     catch
