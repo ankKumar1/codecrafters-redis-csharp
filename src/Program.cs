@@ -39,19 +39,8 @@ void HandleClient(Socket client)
             {
                 return;
             }
-
-            if (command[0].ToLower() == "echo")
-            {
-                string message = command[1];
-
-                string response = $"${message.Length}\r\n{message}\r\n";
-                client.Send(Encoding.UTF8.GetBytes(response));
-            }
-            else
-            {
-                byte[] response = Encoding.UTF8.GetBytes("+PONG\r\n");
-                client.Send(response);
-            }
+            HandleCommands.ExecuteCommands(command, client);
+            
             
         }
     }
