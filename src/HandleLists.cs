@@ -20,7 +20,12 @@ namespace codecrafters_redis.src
                 list = new List<string>();
                 listStore[key] = list;
             }
-            list.Add(command[2]);
+
+            for (int i = 2; i < command.Length; i++)
+            {
+                list.Add(command[i]);
+            }
+
             return $":{list.Count}\r\n";
         }
     }
