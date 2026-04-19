@@ -26,6 +26,10 @@ namespace codecrafters_redis.src
                 string key = command[1];
                 response = HandleGet(key, client);           
             }
+            else if (command[0].Equals("rpush", StringComparison.OrdinalIgnoreCase))
+            {
+                response = HandleLists.RPush(command);
+            }
             else
             {
                 response = "+PONG\r\n";

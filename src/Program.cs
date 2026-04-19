@@ -39,8 +39,7 @@ void HandleClient(Socket client)
             {
                 return;
             }
-            HandleCommands.ExecuteCommands(command, client);
-            
+            HandleCommands.ExecuteCommands(command, client);         
             
         }
     }
