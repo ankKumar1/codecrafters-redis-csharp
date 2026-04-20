@@ -46,7 +46,10 @@ namespace codecrafters_redis.src
             int start = int.Parse(command[2]);
             int stop = int.Parse(command[3]);
 
-            if(start>=n || start > stop)
+            if (start < 0) start = 0;
+            if (stop >= n) stop = n - 1;
+
+            if (start>=n || start > stop)
             {
                 return "*0\r\n";
             }
