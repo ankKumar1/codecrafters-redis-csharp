@@ -10,7 +10,7 @@ namespace codecrafters_redis.src
         static Dictionary<string, RedisValue> store = new();
         public static void ExecuteCommands(string[] command, Socket client)
         {
-            string response = string.Empty;
+            string response;
             if (command[0].Equals("echo", StringComparison.OrdinalIgnoreCase))
             {
                 string message = command[1];
