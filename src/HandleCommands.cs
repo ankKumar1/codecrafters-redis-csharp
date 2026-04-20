@@ -11,34 +11,43 @@ namespace codecrafters_redis.src
         public static void ExecuteCommands(string[] command, Socket client)
         {
             string response;
-            if (command[0].Equals("echo", StringComparison.OrdinalIgnoreCase))
+
+            switch (command[0].ToLower())
             {
-                string message = command[1];
-                response = $"${message.Length}\r\n{message}\r\n";
-            }
-            else if (command[0].Equals("set", StringComparison.OrdinalIgnoreCase))
-            {
-                HandleSet(command);
-                response = "+OK\r\n";
-            }
-            else if (command[0].Equals("get", StringComparison.OrdinalIgnoreCase))
-            {
-                string key = command[1];
-                response = HandleGet(key, client);           
-            }
-            else if (command[0].Equals("rpush", StringComparison.OrdinalIgnoreCase))
-            {
-                response = HandleLists.RPush(command);
-            }
-            else
-            {
-                response = "+PONG\r\n";
-                
+                case "ping":
+                    response = "+PONG\r\n";
+                    break;
+
+                case "echo":
+                    string message = command[1];
+                    response = $"${message.Length}\r\n{message}\r\n";
+                    break;
+
+                case "set":                   
+                    response = HandleSet(command); 
+                    break;
+
+                case "get":
+                    string key = command[1];
+                    response = HandleGet(key, client);
+                    break;
+
+                case "rpush":
+                    response = HandleLists.RPush(command);
+                    break;
+
+                case "lrange":
+                    response = HandleLists.LRange(command);
+                    break;
+
+                default:
+                    response = "-ERR unknown command\r\n";
+                    break;
             }
             client.Send(Encoding.UTF8.GetBytes(response));
         }
 
-        private static void HandleSet(string[] command)
+        private static string HandleSet(string[] command)
         {
             string key = command[1];
             string value = command[2];
@@ -56,6 +65,7 @@ namespace codecrafters_redis.src
                 Value = value,
                 Expiry = expiry
             };
+            return "+OK\r\n";
         }
 
         private static string HandleGet(string key, Socket client)
