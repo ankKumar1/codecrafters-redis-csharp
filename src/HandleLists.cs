@@ -59,7 +59,9 @@ namespace codecrafters_redis.src
             for (int i = start; i <= stop; i++)
             {
                 string value = list[i];
-                result.Append($"${value.Length}\r\n{value}\r\n");
+
+                result.Append($"${value.Length}\r\n");
+                result.Append($"{value}\r\n");
             }
 
             return result.ToString();
