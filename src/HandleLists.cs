@@ -7,6 +7,7 @@ namespace codecrafters_redis.src
     public class HandleLists
     {
         static Dictionary<string, List<string>> listStore = new Dictionary<string, List<string>>();
+
         public static string RPush(string[] command)
         {
             if (command.Length < 3)
@@ -37,7 +38,7 @@ namespace codecrafters_redis.src
             }
 
             string key = command[1];
-            
+
             if (!listStore.TryGetValue(key, out var list))
             {
                 return "*0\r\n";
@@ -52,7 +53,7 @@ namespace codecrafters_redis.src
             if (start < 0) start = 0;
             if (stop >= n) stop = n - 1;
 
-            if (start>=n || start > stop)
+            if (start >= n || start > stop)
             {
                 return "*0\r\n";
             }
@@ -71,6 +72,30 @@ namespace codecrafters_redis.src
             }
 
             return result.ToString();
+        }
+
+        public static string LPush(string[] commands)
+        {
+            if (commands.Length < 3)
+            {
+                return "-ERR wrong number of arguments\r\n";
+            }
+
+            string key = commands[1];
+
+            if (!listStore.TryGetValue(key, out var list))
+            {
+                list = new List<string>();
+                listStore[key] = list;
+            }
+
+            for (int i = 2; i < commands.Length; i++)
+            {
+                list.Insert(0, commands[i]);
+            }
+
+            return $":{list.Count}\r\n";
+
         }
     }
 }
