@@ -41,7 +41,7 @@ namespace codecrafters_redis.src
                     break;
 
                 case "lpush":
-                    response = HandleLists.LRange(command);
+                    response = HandleLists.LPush(command);
                     break;
 
                 default:
