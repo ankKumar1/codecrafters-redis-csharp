@@ -40,6 +40,10 @@ namespace codecrafters_redis.src
                     response = HandleLists.LRange(command);
                     break;
 
+                case "lpush":
+                    response = HandleLists.LRange(command);
+                    break;
+
                 default:
                     response = "-ERR unknown command\r\n";
                     break;
