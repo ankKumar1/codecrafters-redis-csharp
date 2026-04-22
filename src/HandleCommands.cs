@@ -44,6 +44,10 @@ namespace codecrafters_redis.src
                     response = HandleLists.LPush(command);
                     break;
 
+                case "llen":
+                    response = HandleLists.LLen(command);
+                    break;
+
                 default:
                     response = "-ERR unknown command\r\n";
                     break;
