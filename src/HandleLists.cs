@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
@@ -95,7 +96,17 @@ namespace codecrafters_redis.src
             }
 
             return $":{list.Count}\r\n";
+        }
 
+        public static string LLen(string[] commands)
+        {
+            string key = commands[1];
+
+            if (!listStore.TryGetValue(key, out var list))
+            {
+                return $":0\r\n";
+            }
+            return $":{list.Count}\r\n";
         }
     }
 }
