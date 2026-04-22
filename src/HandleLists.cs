@@ -100,6 +100,11 @@ namespace codecrafters_redis.src
 
         public static string LLen(string[] commands)
         {
+            if (commands.Length < 2)
+            {
+                return "-ERR wrong number of arguments\r\n";
+            }
+
             string key = commands[1];
 
             if (!listStore.TryGetValue(key, out var list))
@@ -107,6 +112,24 @@ namespace codecrafters_redis.src
                 return $":0\r\n";
             }
             return $":{list.Count}\r\n";
+        }
+
+        public static string LPop(string[] commands)
+        {
+            if (commands.Length < 2)
+            {
+                return "-ERR wrong number of arguments\r\n";
+            }
+
+            string key = commands[1];
+
+            if (!listStore.TryGetValue(key, out var list) || list.Count ==0)
+            {
+                return $"$-1\r\n";
+            }
+            string val = list[0];
+            list.RemoveAt(0);
+            return $"${val.Length}\r\n{val}\r\n";
         }
     }
 }
