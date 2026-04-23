@@ -123,13 +123,39 @@ namespace codecrafters_redis.src
 
             string key = commands[1];
 
-            if (!listStore.TryGetValue(key, out var list) || list.Count ==0)
+            if (!listStore.TryGetValue(key, out var list) || list.Count == 0)
             {
                 return $"$-1\r\n";
             }
-            string val = list[0];
-            list.RemoveAt(0);
-            return $"${val.Length}\r\n{val}\r\n";
+            if (commands.Length == 2)
+            {
+
+                string val = list[0];
+                list.RemoveAt(0);
+
+                return $"${val.Length}\r\n{val}\r\n";
+
+            }
+
+            int count = int.Parse(commands[2]);
+
+            if (count > list.Count)
+                count = list.Count;
+
+            var result = new StringBuilder();
+
+            result.Append($"*{count}\r\n");
+
+            for (int i = 0; i < count; i++)
+            {
+                string value = list[i];
+
+                result.Append($"${value.Length}\r\n");
+                result.Append($"{value}\r\n");
+            }
+
+            list.RemoveRange(0, count);
+            return result.ToString();
         }
     }
 }
