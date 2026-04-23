@@ -53,7 +53,7 @@ namespace codecrafters_redis.src
                     break;
 
                 case "blpop":
-                    response = HandleLists.BLPop(command);
+                    response = HandleLists.BLPop(command, client);
                     break;
 
                 default:
