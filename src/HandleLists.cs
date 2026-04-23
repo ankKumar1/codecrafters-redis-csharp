@@ -127,14 +127,12 @@ namespace codecrafters_redis.src
             {
                 return $"$-1\r\n";
             }
+
             if (commands.Length == 2)
             {
-
                 string val = list[0];
                 list.RemoveAt(0);
-
                 return $"${val.Length}\r\n{val}\r\n";
-
             }
 
             int count = int.Parse(commands[2]);
@@ -149,13 +147,46 @@ namespace codecrafters_redis.src
             for (int i = 0; i < count; i++)
             {
                 string value = list[i];
-
                 result.Append($"${value.Length}\r\n");
                 result.Append($"{value}\r\n");
             }
 
             list.RemoveRange(0, count);
             return result.ToString();
+        }
+
+        public static string BLPop(string[] commands)
+        {
+            if (commands.Length < 3)
+            {
+                return "-ERR wrong number of arguments\r\n";
+            }
+
+            string key = commands[1];
+            int timeout = int.Parse(commands[2]);
+
+            DateTime endTime = DateTime.UtcNow.AddSeconds(timeout);
+
+            while (DateTime.UtcNow < endTime)
+            {
+                if (listStore.TryGetValue(key, out var list) && list.Count > 0)
+                {
+                        string value = list[0];
+                        list.RemoveAt(0);
+
+                        var result = new StringBuilder();
+
+                        result.Append("*2\r\n");
+                        result.Append($"${key.Length}\r\n{key}\r\n");
+                        result.Append($"${value.Length}\r\n{value}\r\n");
+
+                        return result.ToString();    
+                }
+
+                Thread.Sleep(100);
+            }
+
+            return "$-1\r\n";
         }
     }
 }

@@ -52,6 +52,10 @@ namespace codecrafters_redis.src
                     response = HandleLists.LPop(command);
                     break;
 
+                case "blpop":
+                    response = HandleLists.BLPop(command);
+                    break;
+
                 default:
                     response = "-ERR unknown command\r\n";
                     break;
