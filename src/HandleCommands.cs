@@ -60,7 +60,11 @@ namespace codecrafters_redis.src
                     response = "-ERR unknown command\r\n";
                     break;
             }
-            client.Send(Encoding.UTF8.GetBytes(response));
+
+            if (response != null)
+            {
+                client.Send(Encoding.UTF8.GetBytes(response));
+            }
         }
 
         private static string HandleSet(string[] command)

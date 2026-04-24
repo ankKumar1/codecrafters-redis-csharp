@@ -11,6 +11,7 @@ namespace codecrafters_redis.src
     {
         static ConcurrentDictionary<string, List<string>> listStore = new();
         static ConcurrentDictionary<string, Queue<Socket>> waitingClients = new();
+        static ConcurrentDictionary<string, object> keyLocks = new();
 
         public static string RPush(string[] command)
         {
@@ -19,16 +20,11 @@ namespace codecrafters_redis.src
 
             string key = command[1];
             var list = listStore.GetOrAdd(key, _ => new List<string>());
+            var queue = waitingClients.GetOrAdd(key, _ => new Queue<Socket>());
 
-            lock (list)
-            {
-                foreach (var val in command.Skip(2))
-                {
-                    list.Add(val);
-                }
-            }
+            int added = 0;
 
-            if (waitingClients.TryGetValue(key, out var queue))
+            foreach (var val in command.Skip(2))
             {
                 Socket? client = null;
 
@@ -40,23 +36,21 @@ namespace codecrafters_redis.src
 
                 if (client != null)
                 {
-                    string value;
-
+                    string response = BuildArrayResponse(key, val);
+                    client.Send(Encoding.UTF8.GetBytes(response));
+                    added++; 
+                }
+                else
+                {
                     lock (list)
                     {
-                        if (list.Count == 0)
-                            return $":0\r\n";
-
-                        value = list[0];
-                        list.RemoveAt(0);
+                        list.Add(val);
                     }
-
-                    string response = BuildArrayResponse(key, value);
-                    client.Send(Encoding.UTF8.GetBytes(response));
+                    added++;
                 }
             }
 
-            return $":{list.Count}\r\n";
+            return $":{added}\r\n";
         }
 
 
@@ -176,23 +170,19 @@ namespace codecrafters_redis.src
 
             string key = command[1];
 
-            if (listStore.TryGetValue(key, out var list))
-            {
-                lock (list)
-                {
-                    if (list.Count > 0)
-                    {
-                        string value = list[0];
-                        list.RemoveAt(0);
-                        return BuildArrayResponse(key, value);
-                    }
-                }
-            }
-
+            var list = listStore.GetOrAdd(key, _ => new List<string>());
             var queue = waitingClients.GetOrAdd(key, _ => new Queue<Socket>());
+            var keyLock = keyLocks.GetOrAdd(key, _ => new object());
 
-            lock (queue)
+            lock (keyLock) 
             {
+                if (list.Count > 0)
+                {
+                    string value = list[0];
+                    list.RemoveAt(0);
+                    return BuildArrayResponse(key, value);
+                }
+
                 queue.Enqueue(client);
             }
 
