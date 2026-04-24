@@ -22,7 +22,7 @@ namespace codecrafters_redis.src
             var list = listStore.GetOrAdd(key, _ => new List<string>());
             var queue = waitingClients.GetOrAdd(key, _ => new Queue<Socket>());
 
-            int added = 0;
+            int pushedToList = 0;
 
             foreach (var val in command.Skip(2))
             {
@@ -38,19 +38,24 @@ namespace codecrafters_redis.src
                 {
                     string response = BuildArrayResponse(key, val);
                     client.Send(Encoding.UTF8.GetBytes(response));
-                    added++; 
                 }
                 else
                 {
                     lock (list)
                     {
                         list.Add(val);
+                        pushedToList++;
                     }
-                    added++;
                 }
             }
 
-            return $":{added}\r\n";
+            int finalLength;
+
+            lock (list)
+            {
+                finalLength = list.Count;
+            }
+            return $":{finalLength}\r\n";
         }
 
 
