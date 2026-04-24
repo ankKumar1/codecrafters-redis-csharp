@@ -22,7 +22,14 @@ namespace codecrafters_redis.src
             var list = listStore.GetOrAdd(key, _ => new List<string>());
             var queue = waitingClients.GetOrAdd(key, _ => new Queue<Socket>());
 
-            int pushedToList = 0;
+            int currentLength;
+
+            lock (list)
+            {
+                currentLength = list.Count;
+            }
+
+            int valuesToPush = command.Length - 2;
 
             foreach (var val in command.Skip(2))
             {
@@ -44,18 +51,11 @@ namespace codecrafters_redis.src
                     lock (list)
                     {
                         list.Add(val);
-                        pushedToList++;
                     }
                 }
             }
 
-            int finalLength;
-
-            lock (list)
-            {
-                finalLength = list.Count;
-            }
-            return $":{finalLength}\r\n";
+            return $":{currentLength + valuesToPush}\r\n";
         }
 
 
