@@ -7,7 +7,6 @@ namespace codecrafters_redis.src
 {
     public class HandleCommands
     {
-        static Dictionary<string, RedisValue> store = new();
         public static void ExecuteCommands(string[] command, Socket client)
         {
             string response;
@@ -15,7 +14,7 @@ namespace codecrafters_redis.src
             switch (command[0].ToLower())
             {
                 case "ping":
-                    response = "+PONG\r\n";
+                    response = OutputParser.SimpleString("PONG");
                     break;
 
                 case "echo":
@@ -24,12 +23,12 @@ namespace codecrafters_redis.src
                     break;
 
                 case "set":                   
-                    response = HandleSet(command); 
+                    response = HandleGetSet.HandleSet(command); 
                     break;
 
                 case "get":
                     string key = command[1];
-                    response = HandleGet(key, client);
+                    response = HandleGetSet.HandleGet(key, client);
                     break;
 
                 case "rpush":
@@ -57,7 +56,7 @@ namespace codecrafters_redis.src
                     break;
 
                 default:
-                    response = "-ERR unknown command\r\n";
+                    response = OutputParser.Error( "ERR unknown command");
                     break;
             }
 
@@ -65,50 +64,6 @@ namespace codecrafters_redis.src
             {
                 client.Send(Encoding.UTF8.GetBytes(response));
             }
-        }
-
-        private static string HandleSet(string[] command)
-        {
-            string key = command[1];
-            string value = command[2];
-
-            DateTime? expiry = null;
-
-            if (command.Length >= 5 && command[3].Equals("PX", StringComparison.OrdinalIgnoreCase))
-            {
-                int milliseconds = int.Parse(command[4]);
-                expiry = DateTime.UtcNow.AddMilliseconds(milliseconds);
-            }
-
-            store[key] = new RedisValue
-            {
-                Value = value,
-                Expiry = expiry
-            };
-            return "+OK\r\n";
-        }
-
-        private static string HandleGet(string key, Socket client)
-        {
-            string response = string.Empty;
-            if (store.TryGetValue(key, out var entry))
-            {
-                if (entry.Expiry.HasValue && entry.Expiry.Value < DateTime.UtcNow)
-                {
-                    store.Remove(key);
-                    response = "$-1\r\n";
-                }
-                else
-                {
-                    string value = entry.Value;
-                    response = $"${value.Length}\r\n{value}\r\n";
-                }
-            }
-            else
-            {
-                response = "$-1\r\n";
-            }
-            return response;
         }
     }
 }

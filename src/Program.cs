@@ -33,7 +33,7 @@ void HandleClient(Socket client)
             }
 
             string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-            string[] command = RespParser.ParseRESP(request);
+            string[] command = InputParser.ParseInput(request);
 
             if(command.Length == 0)
             {

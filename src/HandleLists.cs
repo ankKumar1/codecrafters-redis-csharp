@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -16,7 +17,7 @@ namespace codecrafters_redis.src
         public static string RPush(string[] command)
         {
             if (command.Length < 3)
-                return "-ERR wrong number of arguments\r\n";
+                return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
             var list = listStore.GetOrAdd(key, _ => new List<string>());
@@ -43,7 +44,7 @@ namespace codecrafters_redis.src
 
                 if (client != null)
                 {
-                    string response = BuildArrayResponse(key, val);
+                    string response = OutputParser.Array(key, val); 
                     client.Send(Encoding.UTF8.GetBytes(response));
                 }
                 else
@@ -55,19 +56,19 @@ namespace codecrafters_redis.src
                 }
             }
 
-            return $":{currentLength + valuesToPush}\r\n";
+            return OutputParser.Integer(currentLength + valuesToPush); 
         }
 
 
         public static string LRange(string[] command)
         {
             if (command.Length < 4)
-                return "-ERR wrong number of arguments\r\n";
+                return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
 
             if (!listStore.TryGetValue(key, out var list))
-                return "*0\r\n";
+                return OutputParser.Array(new List<string>()); 
 
             lock (list)
             {
@@ -83,27 +84,23 @@ namespace codecrafters_redis.src
                 if (stop >= n) stop = n - 1;
 
                 if (start >= n || start > stop)
-                    return "*0\r\n";
+                    return OutputParser.Array(new List<string>());
 
-                var result = new StringBuilder();
-                int count = stop - start + 1;
-
-                result.Append($"*{count}\r\n");
+                var resultList = new List<string>();
 
                 for (int i = start; i <= stop; i++)
                 {
-                    string value = list[i];
-                    result.Append($"${value.Length}\r\n{value}\r\n");
+                    resultList.Add(list[i]);
                 }
 
-                return result.ToString();
+                return OutputParser.Array(resultList); 
             }
         }
 
         public static string LPush(string[] command)
         {
             if (command.Length < 3)
-                return "-ERR wrong number of arguments\r\n";
+                return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
             var list = listStore.GetOrAdd(key, _ => new List<string>());
@@ -116,31 +113,31 @@ namespace codecrafters_redis.src
                 }
             }
 
-            return $":{list.Count}\r\n";
+            return OutputParser.Integer(list.Count); 
         }
 
         public static string LLen(string[] command)
         {
             if (command.Length < 2)
-                return "-ERR wrong number of arguments\r\n";
+                return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
 
             if (!listStore.TryGetValue(key, out var list))
-                return ":0\r\n";
+                return OutputParser.Integer(0);
 
-            return $":{list.Count}\r\n";
+            return OutputParser.Integer(list.Count); 
         }
 
         public static string LPop(string[] command)
         {
             if (command.Length < 2)
-                return "-ERR wrong number of arguments\r\n";
+                return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
 
             if (!listStore.TryGetValue(key, out var list) || list.Count == 0)
-                return "$-1\r\n";
+                return OutputParser.NullBulk();
 
             lock (list)
             {
@@ -148,61 +145,78 @@ namespace codecrafters_redis.src
                 {
                     string val = list[0];
                     list.RemoveAt(0);
-                    return $"${val.Length}\r\n{val}\r\n";
+                    return OutputParser.BulkString(val);
                 }
 
                 int count = int.Parse(command[2]);
                 if (count > list.Count) count = list.Count;
 
-                var result = new StringBuilder();
-                result.Append($"*{count}\r\n");
+                var resultList = new List<string>();
 
                 for (int i = 0; i < count; i++)
                 {
-                    string val = list[i];
-                    result.Append($"${val.Length}\r\n{val}\r\n");
+                    resultList.Add(list[i]);
                 }
 
                 list.RemoveRange(0, count);
-                return result.ToString();
+
+                return OutputParser.Array(resultList); 
             }
         }
 
         public static string BLPop(string[] command, Socket client)
         {
             if (command.Length < 3)
-                return "-ERR wrong number of arguments\r\n";
+                return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
+            double timeout = double.Parse(command[^1], CultureInfo.InvariantCulture);
 
             var list = listStore.GetOrAdd(key, _ => new List<string>());
             var queue = waitingClients.GetOrAdd(key, _ => new Queue<Socket>());
             var keyLock = keyLocks.GetOrAdd(key, _ => new object());
 
-            lock (keyLock) 
+            lock (keyLock)
             {
                 if (list.Count > 0)
                 {
                     string value = list[0];
                     list.RemoveAt(0);
-                    return BuildArrayResponse(key, value);
+                    return OutputParser.Array(key, value);
                 }
 
                 queue.Enqueue(client);
             }
 
+            if (timeout > 0)
+            {
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(timeout));
+
+                    lock (keyLock)
+                    {
+                        if (queue.Contains(client))
+                        {
+                            var newQueue = new Queue<Socket>();
+
+                            while (queue.Count > 0)
+                            {
+                                var c = queue.Dequeue();
+                                if (c != client)
+                                    newQueue.Enqueue(c);
+                            }
+
+                            while (newQueue.Count > 0)
+                                queue.Enqueue(newQueue.Dequeue());
+
+                            client.Send(Encoding.UTF8.GetBytes(OutputParser.NullArray()));
+                        }
+                    }
+                });
+            }
+
             return null;
-        }
-
-        private static string BuildArrayResponse(string key, string value)
-        {
-            var sb = new StringBuilder();
-
-            sb.Append("*2\r\n");
-            sb.Append($"${key.Length}\r\n{key}\r\n");
-            sb.Append($"${value.Length}\r\n{value}\r\n");
-
-            return sb.ToString();
         }
     }
 }

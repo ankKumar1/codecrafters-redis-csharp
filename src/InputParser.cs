@@ -4,9 +4,9 @@ using System.Text;
 
 namespace codecrafters_redis.src
 {
-    public class RespParser
+    public class InputParser
     {
-        public static string[] ParseRESP(string input)
+        public static string[] ParseInput(string input)
         {
             var result = new List<string>();
 
