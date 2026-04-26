@@ -10,7 +10,6 @@ namespace codecrafters_redis.src
 {
     public class HandleLists
     {
-        static ConcurrentDictionary<string, List<string>> listStore = new();
         static ConcurrentDictionary<string, Queue<Socket>> waitingClients = new();
         static ConcurrentDictionary<string, object> keyLocks = new();
 
@@ -20,7 +19,7 @@ namespace codecrafters_redis.src
                 return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
-            var list = listStore.GetOrAdd(key, _ => new List<string>());
+            var list = DataStore.listStore.GetOrAdd(key, _ => new List<string>());
             var queue = waitingClients.GetOrAdd(key, _ => new Queue<Socket>());
 
             int currentLength;
@@ -67,7 +66,7 @@ namespace codecrafters_redis.src
 
             string key = command[1];
 
-            if (!listStore.TryGetValue(key, out var list))
+            if (!DataStore.listStore.TryGetValue(key, out var list))
                 return OutputParser.Array(new List<string>()); 
 
             lock (list)
@@ -103,7 +102,7 @@ namespace codecrafters_redis.src
                 return OutputParser.Error("ERR wrong number of arguments");
 
             string key = command[1];
-            var list = listStore.GetOrAdd(key, _ => new List<string>());
+            var list = DataStore.listStore.GetOrAdd(key, _ => new List<string>());
 
             lock (list)
             {
@@ -123,7 +122,7 @@ namespace codecrafters_redis.src
 
             string key = command[1];
 
-            if (!listStore.TryGetValue(key, out var list))
+            if (!DataStore.listStore.TryGetValue(key, out var list))
                 return OutputParser.Integer(0);
 
             return OutputParser.Integer(list.Count); 
@@ -136,7 +135,7 @@ namespace codecrafters_redis.src
 
             string key = command[1];
 
-            if (!listStore.TryGetValue(key, out var list) || list.Count == 0)
+            if (!DataStore.listStore.TryGetValue(key, out var list) || list.Count == 0)
                 return OutputParser.NullBulk();
 
             lock (list)
@@ -172,7 +171,7 @@ namespace codecrafters_redis.src
             string key = command[1];
             double timeout = double.Parse(command[^1], CultureInfo.InvariantCulture);
 
-            var list = listStore.GetOrAdd(key, _ => new List<string>());
+            var list = DataStore.listStore.GetOrAdd(key, _ => new List<string>());
             var queue = waitingClients.GetOrAdd(key, _ => new Queue<Socket>());
             var keyLock = keyLocks.GetOrAdd(key, _ => new object());
 

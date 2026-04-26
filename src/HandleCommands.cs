@@ -28,7 +28,7 @@ namespace codecrafters_redis.src
 
                 case "get":
                     string key = command[1];
-                    response = HandleGetSet.HandleGet(key, client);
+                    response = HandleGetSet.HandleGet(key);
                     break;
 
                 case "rpush":
@@ -53,6 +53,9 @@ namespace codecrafters_redis.src
 
                 case "blpop":
                     response = HandleLists.BLPop(command, client);
+                    break;
+                case "type":
+                    response = HandleStreams.Type(command);
                     break;
 
                 default:

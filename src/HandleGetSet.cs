@@ -7,7 +7,6 @@ namespace codecrafters_redis.src
 {
     public class HandleGetSet
     {
-        static Dictionary<string, RedisValue> store = new();
         public static string HandleSet(string[] command)
         {
             string key = command[1];
@@ -21,35 +20,29 @@ namespace codecrafters_redis.src
                 expiry = DateTime.UtcNow.AddMilliseconds(milliseconds);
             }
 
-            store[key] = new RedisValue
+            DataStore.KeyValueStore[key] = new RedisValue
             {
                 Value = value,
                 Expiry = expiry
             };
+
             return OutputParser.SimpleString("OK");
         }
 
-        public static string HandleGet(string key, Socket client)
+        public static string HandleGet(string key)
         {
-            string response = string.Empty;
-            if (store.TryGetValue(key, out var entry))
+            if (DataStore.KeyValueStore.TryGetValue(key, out var entry))
             {
                 if (entry.Expiry.HasValue && entry.Expiry.Value < DateTime.UtcNow)
                 {
-                    store.Remove(key);
-                    response = OutputParser.NullBulk();
+                    DataStore.KeyValueStore.TryRemove(key, out _);
+                    return OutputParser.NullBulk();
                 }
-                else
-                {
-                    string value = entry.Value;
-                    response = OutputParser.BulkString(value);
-                }
+
+                return OutputParser.BulkString(entry.Value);
             }
-            else
-            {
-                response = OutputParser.NullBulk();
-            }
-            return response;
+
+            return OutputParser.NullBulk();
         }
     }
 }
