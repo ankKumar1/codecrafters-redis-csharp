@@ -54,8 +54,13 @@ namespace codecrafters_redis.src
                 case "blpop":
                     response = HandleLists.BLPop(command, client);
                     break;
+
                 case "type":
                     response = HandleStreams.Type(command);
+                    break;
+
+                case "xadd":
+                    response = HandleStreams.XAdd(command);
                     break;
 
                 default:

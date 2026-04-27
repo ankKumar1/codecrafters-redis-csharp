@@ -28,7 +28,44 @@ namespace codecrafters_redis.src
             {
                 return OutputParser.SimpleString("list");
             }
+
+            if (DataStore.HasStream(key))
+            {
+                return OutputParser.SimpleString("stream");
+            }
+
             return OutputParser.SimpleString("none");
+        }
+
+        public static string XAdd(string[] command)
+        {
+            if (command.Length < 5 || (command.Length - 3) % 2 != 0)
+                return OutputParser.Error("ERR wrong number of arguments");
+
+            string key = command[1];
+            string id = command[2];
+
+            var stream = DataStore.streamStore.GetOrAdd(key, _ => new List<StreamValue>());
+
+            var fields = new Dictionary<string, string>();
+
+            for (int i = 3; i < command.Length; i += 2)
+            {
+                fields[command[i]] = command[i + 1];
+            }
+
+            var entry = new StreamValue
+            {
+                Id = id,
+                Fields = fields
+            };
+
+            lock (stream)
+            {
+                stream.Add(entry);
+            }
+
+            return OutputParser.BulkString(id);
         }
     }
 }
