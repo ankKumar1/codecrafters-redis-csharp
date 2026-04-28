@@ -69,7 +69,7 @@ namespace codecrafters_redis.src
                     if (!IsValidNewId(id, lastEntry.Id))
                     {
                         return OutputParser.Error(
-                            "ERR The ID specified in XADD is equal or smaller than the target stream top item"
+                            $"ERR The ID specified in XADD must be greater than {lastEntry}"
                         );
                     }
                 }
