@@ -62,10 +62,42 @@ namespace codecrafters_redis.src
 
             lock (stream)
             {
+                if (stream.Count > 0)
+                {
+                    var lastEntry = stream[^1];
+
+                    if (!IsValidNewId(id, lastEntry.Id))
+                    {
+                        return OutputParser.Error(
+                            "ERR The ID specified in XADD is equal or smaller than the target stream top item"
+                        );
+                    }
+                }
+
                 stream.Add(entry);
             }
 
             return OutputParser.BulkString(id);
+        }
+
+        static (long ms, long seq) ParseId(string id)
+        {
+            var parts = id.Split('-');
+            return (long.Parse(parts[0]), long.Parse(parts[1]));
+        }
+
+        static bool IsValidNewId(string newId, string lastId)
+        {
+            var (newMs, newSeq) = ParseId(newId);
+            var (lastMs, lastSeq) = ParseId(lastId);
+
+            if (newMs > lastMs)
+                return true;
+
+            if (newMs == lastMs && newSeq > lastSeq)
+                return true;
+
+            return false;
         }
     }
 }
