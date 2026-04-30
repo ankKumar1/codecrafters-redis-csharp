@@ -6,6 +6,9 @@ namespace codecrafters_redis.src
 {
     public class HandleStreams
     {
+        const string ERR_ID_ORDER = "ERR The ID specified in XADD is equal or smaller than the target stream top item";
+        const string ERR_ZERO_ID = "ERR The ID specified in XADD must be greater than 0-0";
+
         public static string Type(string[] command)
         {
             if (command.Length < 2)
@@ -47,37 +50,52 @@ namespace codecrafters_redis.src
 
             var stream = DataStore.streamStore.GetOrAdd(key, _ => new List<StreamValue>());
 
-            var fields = new Dictionary<string, string>();
-
-            for (int i = 3; i < command.Length; i += 2)
+            if (id.EndsWith("-*"))
             {
-                fields[command[i]] = command[i + 1];
+                var parts = id.Split('-');
+                long ms = long.Parse(parts[0]);
+
+                long seq = 0;
+
+                if (stream.Count > 0)
+                {
+                    var (lastMs, lastSeq) = ParseId(stream[^1].Id);
+
+                    if (ms < lastMs)
+                        return OutputParser.Error(ERR_ID_ORDER);
+
+                    if (ms == lastMs)
+                        seq = lastSeq + 1;
+                }
+
+                id = $"{ms}-{seq}";
             }
 
-            var entry = new StreamValue
-            {
-                Id = id,
-                Fields = fields
-            };
+            if (id == "0-0")
+                return OutputParser.Error(ERR_ZERO_ID);
 
             lock (stream)
             {
                 if (stream.Count > 0)
                 {
-                    var lastEntry = stream[^1];
-                    if(id == "0-0")
-                    {
-                        return OutputParser.Error("ERR The ID specified in XADD must be greater than 0-0");
-                    }
-                    if (!IsValidNewId(id, lastEntry.Id))
-                    {
-                        return OutputParser.Error(
-                            "ERR The ID specified in XADD is equal or smaller than the target stream top item"
-                        );
-                    }
+                    var lastId = stream[^1].Id;
+
+                    if (!IsValidNewId(id, lastId))
+                        return OutputParser.Error(ERR_ID_ORDER);
                 }
 
-                stream.Add(entry);
+                var fields = new Dictionary<string, string>();
+
+                for (int i = 3; i < command.Length; i += 2)
+                {
+                    fields[command[i]] = command[i + 1];
+                }
+
+                stream.Add(new StreamValue
+                {
+                    Id = id,
+                    Fields = fields
+                });
             }
 
             return OutputParser.BulkString(id);
