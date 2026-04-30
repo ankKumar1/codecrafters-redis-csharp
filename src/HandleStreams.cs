@@ -55,7 +55,7 @@ namespace codecrafters_redis.src
                 var parts = id.Split('-');
                 long ms = long.Parse(parts[0]);
 
-                long seq = 0;
+                long seq = (ms == 0) ? 1 : 0;
 
                 if (stream.Count > 0)
                 {
